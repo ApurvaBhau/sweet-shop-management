@@ -6,9 +6,16 @@ import connectDB from './utils/db.js';
 
 
 import userRoutes from './Routes/user.routes.js'
+import sweetRoutes from './Routes/sweet.routes.js'
+
+
+
 const app = express();
 dotenv.config();
 connectDB();
+
+
+
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
@@ -16,8 +23,13 @@ app.use(cookieParser());
 
 
 app.use('/api/auth',userRoutes);
-const PORT = process.env.PORT;
+app.use('/api/sweets',sweetRoutes);
 
+
+
+
+
+const PORT = process.env.PORT;
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
