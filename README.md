@@ -55,10 +55,13 @@ This project was built as part of a **placement assignment**, with emphasis on *
 - 👀 Monitor all customer orders
 
 ---
-> **"Where every line of code is tested before it's sweet enough to ship!"** ✨
+## 🌐 **Live Deployment**
 
-[![Live Demo](https://sweet-shop-management-11.onrender.com)
+🔗 **API Base:** [https://gtsweets-backend.onrender.com/api](https://sweet-shop-management-11.onrender.com)
 
+⚠️ **Note:** Backend uses Render's free tier. First request may take 30-60 seconds (cold start). Patience is a virtue! ☕
+
+---
 ## 🏗️ **Architecture - The Big Picture**
 
 ```
