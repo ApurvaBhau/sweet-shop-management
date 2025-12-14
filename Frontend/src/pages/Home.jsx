@@ -2,7 +2,25 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { backend_url } from "../utils/constants";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingBag, Package, TrendingUp, Star, ChevronRight, Sparkles, User, LogOut, Plus, Minus, CheckCircle } from "lucide-react";
+import { 
+  Search, 
+  ShoppingBag, 
+  Package, 
+  TrendingUp, 
+  Star, 
+  ChevronRight, 
+  Sparkles, 
+  User, 
+  LogOut, 
+  Plus, 
+  Minus, 
+  CheckCircle, 
+  Filter,
+  X,
+  IndianRupee,
+  Tag,
+  Sliders
+} from "lucide-react";
 
 export default function Home() {
   const [sweets, setSweets] = useState([]);
@@ -13,6 +31,13 @@ export default function Home() {
   const [purchasingSweetId, setPurchasingSweetId] = useState(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    category: "",
+    minPrice: "",
+    maxPrice: ""
+  });
+  const [searchLoading, setSearchLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,6 +47,7 @@ export default function Home() {
 
   const fetchSweets = async () => {
     try {
+      setLoading(true);
       const res = await axios.get(`${backend_url}/api/sweets`, {
         withCredentials: true,
       });
@@ -50,9 +76,72 @@ export default function Home() {
     }
   };
 
+  const handleSearch = async () => {
+    if (!searchQuery.trim() && !filters.category && !filters.minPrice && !filters.maxPrice) {
+      fetchSweets();
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const params = new URLSearchParams();
+      
+      if (searchQuery.trim()) {
+        params.append('name', searchQuery.trim());
+      }
+      
+      if (filters.category) {
+        params.append('category', filters.category);
+      }
+      
+      if (filters.minPrice) {
+        params.append('minPrice', filters.minPrice);
+      }
+      
+      if (filters.maxPrice) {
+        params.append('maxPrice', filters.maxPrice);
+      }
+
+      const res = await axios.get(`${backend_url}/api/sweets/search?${params.toString()}`, {
+        withCredentials: true,
+      });
+
+      if (res.data.success) {
+        setSweets(res.data.sweets || []);
+        
+        const newQuantities = {};
+        res.data.sweets?.forEach(sweet => {
+          newQuantities[sweet._id] = quantities[sweet._id] || 1;
+        });
+        setQuantities(newQuantities);
+      }
+    } catch (error) {
+      console.error("Error searching sweets:", error);
+      alert("Search failed. Please try again.");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setFilters({
+      category: "",
+      minPrice: "",
+      maxPrice: ""
+    });
+    fetchSweets();
+  };
+
   const handleLogout = async () => {
     try {
-      await axios.get(`${backend_url}/api/auth/logout`, {}, {
+      await axios.post(`${backend_url}/api/auth/logout`, {}, {
         withCredentials: true
       });
       localStorage.removeItem('user');
@@ -104,17 +193,14 @@ export default function Home() {
       );
 
       if (res.data.success) {
-        // Show success message
         setSuccessMessage(`Successfully purchased ${quantity} x ${sweet.name} for ₹${(sweet.price * quantity).toFixed(2)}`);
         setShowSuccessMessage(true);
         
-        // Hide success message after 3 seconds
         setTimeout(() => {
           setShowSuccessMessage(false);
           setSuccessMessage("");
         }, 3000);
 
-        // Update local state immediately for better UX
         setSweets(prevSweets => 
           prevSweets.map(s => 
             s._id === sweet._id 
@@ -123,13 +209,11 @@ export default function Home() {
           )
         );
 
-        // Reset quantity for this sweet
         setQuantities(prev => ({
           ...prev,
           [sweet._id]: 1
         }));
 
-        // You could also refetch to get latest data
         setTimeout(() => {
           fetchSweets();
         }, 500);
@@ -139,24 +223,32 @@ export default function Home() {
     } catch (error) {
       const errorMsg = error.response?.data?.message || "Purchase failed";
       alert(errorMsg);
-      
-      // If purchase fails, refresh sweets to get accurate stock
       fetchSweets();
     } finally {
       setPurchasingSweetId(null);
     }
   };
 
-  const filteredSweets = sweets.filter(sweet =>
-    sweet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    sweet.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const stats = {
     totalSweets: sweets.length,
     totalStock: sweets.reduce((sum, sweet) => sum + sweet.quantity, 0),
     totalValue: sweets.reduce((sum, sweet) => sum + (sweet.price * sweet.quantity), 0)
   };
+
+  const popularCategories = [
+    "Traditional",
+    "Festival Special",
+    "Dry Fruit Sweets",
+    "Chocolate Based",
+    "Sugar Free",
+    "Mithai",
+    "Laddu",
+    "Barfi",
+    "Halwa",
+    "Chikki"
+  ];
+
+  const hasActiveFilters = searchQuery || filters.category || filters.minPrice || filters.maxPrice;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-pink-50/50 to-purple-50">
@@ -329,23 +421,191 @@ export default function Home() {
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-r from-pink-400 to-purple-400 rounded-3xl blur-2xl opacity-20"></div>
               <div className="relative bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <Search className="w-5 h-5 text-purple-500" />
-                  <h3 className="text-xl font-semibold text-gray-800">
-                    {user ? 'Quick Search' : 'Find Your Favorite Sweet'}
-                  </h3>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Search className="w-5 h-5 text-purple-500" />
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      {user ? 'Quick Search' : 'Find Your Favorite Sweet'}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  >
+                    <Sliders className="w-5 h-5" />
+                  </button>
                 </div>
                 
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search sweets by name or category..."
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  />
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Search sweets by name or category..."
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Advanced Filters */}
+                  {showFilters && (
+                    <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Category
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={filters.category}
+                              onChange={(e) => setFilters({...filters, category: e.target.value})}
+                              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent appearance-none"
+                            >
+                              <option value="">All Categories</option>
+                              {popularCategories.map((cat, index) => (
+                                <option key={index} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                            <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Min Price (₹)
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={filters.minPrice}
+                                onChange={(e) => setFilters({...filters, minPrice: e.target.value})}
+                                placeholder="Min"
+                                min="0"
+                                className="w-full pl-10 pr-3 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                              />
+                              <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Max Price (₹)
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={filters.maxPrice}
+                                onChange={(e) => setFilters({...filters, maxPrice: e.target.value})}
+                                placeholder="Max"
+                                min="0"
+                                className="w-full pl-10 pr-3 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                              />
+                              <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={handleSearch}
+                          disabled={searchLoading}
+                          className="flex-1 px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all font-medium flex items-center justify-center gap-2"
+                        >
+                          {searchLoading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Searching...
+                            </>
+                          ) : (
+                            <>
+                              <Search className="w-4 h-4" />
+                              Search
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={clearFilters}
+                          className="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!showFilters && (
+                    <button
+                      onClick={handleSearch}
+                      disabled={searchLoading}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl hover:from-pink-600 hover:to-purple-700 transition-all font-medium flex items-center justify-center gap-2"
+                    >
+                      {searchLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-4 h-4" />
+                          Search Sweets
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
+
+                {hasActiveFilters && !showFilters && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {searchQuery && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-pink-100 text-pink-700 rounded-full text-sm">
+                        Name: {searchQuery}
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="text-pink-500 hover:text-pink-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                    {filters.category && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm">
+                        Category: {filters.category}
+                        <button
+                          onClick={() => setFilters({...filters, category: ""})}
+                          className="text-purple-500 hover:text-purple-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                    {(filters.minPrice || filters.maxPrice) && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm">
+                        Price: 
+                        {filters.minPrice && ` ₹${filters.minPrice}`}
+                        {filters.minPrice && filters.maxPrice && " - "}
+                        {filters.maxPrice && ` ₹${filters.maxPrice}`}
+                        <button
+                          onClick={() => setFilters({...filters, minPrice: "", maxPrice: ""})}
+                          className="text-amber-500 hover:text-amber-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -395,10 +655,12 @@ export default function Home() {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Our Sweet Collection</h2>
-              <p className="text-gray-600">Freshly made with traditional recipes</p>
+              <p className="text-gray-600">
+                {hasActiveFilters ? 'Search Results' : 'Freshly made with traditional recipes'}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">{filteredSweets.length} items</span>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500">{sweets.length} items found</span>
               {user && user.role === 'admin' && (
                 <Link
                   to="/add"
@@ -407,31 +669,55 @@ export default function Home() {
                   + Add New
                 </Link>
               )}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Clear Filters
+                </button>
+              )}
             </div>
           </div>
 
-          {loading ? (
+          {loading || searchLoading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
-              <p className="mt-4 text-gray-600">Loading sweets...</p>
+              <p className="mt-4 text-gray-600">
+                {searchLoading ? 'Searching sweets...' : 'Loading sweets...'}
+              </p>
             </div>
-          ) : filteredSweets.length === 0 ? (
+          ) : sweets.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
               <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No sweets found</h3>
-              <p className="text-gray-500 mb-6">Try a different search term</p>
-              {user && user.role === 'admin' && (
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                {hasActiveFilters ? 'No sweets found' : 'No sweets available'}
+              </h3>
+              <p className="text-gray-500 mb-6">
+                {hasActiveFilters 
+                  ? 'Try adjusting your search or filters' 
+                  : 'Check back soon for new additions'}
+              </p>
+              {hasActiveFilters ? (
+                <button
+                  onClick={clearFilters}
+                  className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all font-medium"
+                >
+                  Clear Search & Filters
+                </button>
+              ) : user && user.role === 'admin' ? (
                 <Link
                   to="/add"
                   className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all font-medium"
                 >
                   Add Your First Sweet
                 </Link>
-              )}
+              ) : null}
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredSweets.map((sweet) => (
+              {sweets.map((sweet) => (
                 <div
                   key={sweet._id}
                   className="group bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-xl hover:border-pink-100 transition-all duration-300"
