@@ -581,7 +581,7 @@ git push origin feature/amazing-feature
 
 ## 👨‍💻 **About the Developer**
 
-**Gaurav Thakur** - Full Stack Developer & TDD Enthusiast
+**Apurva Bhau** - Full Stack Developer & TDD Enthusiast
 
 🐙 GitHub: [@ApurvaBhau](https://github.com/ApurvaBhau)  
 📧 Email: apurvasingh766@gmail.com
