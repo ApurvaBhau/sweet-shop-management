@@ -55,6 +55,9 @@ This project was built as part of a **placement assignment**, with emphasis on *
 - 👀 Monitor all customer orders
 
 ---
+> **"Where every line of code is tested before it's sweet enough to ship!"** ✨
+
+[![Live Demo](https://sweet-shop-management-11.onrender.com)
 
 ## 🏗️ **Architecture - The Big Picture**
 
