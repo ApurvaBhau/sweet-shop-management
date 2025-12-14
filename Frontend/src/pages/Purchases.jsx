@@ -48,7 +48,7 @@ export default function Purchases() {
 
   const handleLogout = async () => {
     try {
-      await axios.post(`${backend_url}/api/auth/logout`, {}, {
+      await axios.get(`${backend_url}/api/auth/logout`, {}, {
         withCredentials: true
       });
       localStorage.removeItem('user');

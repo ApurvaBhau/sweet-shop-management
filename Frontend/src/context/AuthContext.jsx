@@ -80,7 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post(`${backend_url}/api/auth/logout`, {}, {
+      await axios.get(`${backend_url}/api/auth/logout`, {}, {
         withCredentials: true
       });
     } catch (error) {
